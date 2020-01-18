@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply from: new File(rootProject.projectDir, 'liquidcore.build.gradle')
 
 android {
     compileSdkVersion 29
