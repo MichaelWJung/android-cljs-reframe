@@ -20,6 +20,13 @@ android {
     }
 }
 
+task copyClojureBundle(type: Copy) {
+    from file("build-clj/dev/app.js")
+    into file("src/main/res/raw")
+}
+
+preBuild.dependsOn copyClojureBundle
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.1.0'

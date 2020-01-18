@@ -1,8 +1,9 @@
 /build
+/build-clj
+/node_modules
+/target
 .shadow-cljs/
 package-lock.json
 package.json
 shadow-cljs.edn
-node_modules
-target
 src/main/res/raw/app.js
