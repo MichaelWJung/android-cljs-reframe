@@ -18,13 +18,12 @@
                                     "build-clj"]
   :shadow-cljs {:nrepl  {:port 8777}
                 :builds {:app {:target     :browser
-                               ; :main money.core/-main
-                               :optimizations :advanced
-                               ; :output-to "app.js"
+                               :optimizations :simple
+                               ; :optimizations :advanced
                                :output-dir "build-clj/dev"
                                :compiler-options {:output-feature-set :es5}
                                ; :pretty-print true
-                               :modules    {:app {:init-fn money.core/-main}}
+                               :modules    {:app {:init-fn app.core/-main}}
                                }}}
 
   :aliases {"dev-auto" ["shadow" "watch" "app"]})
