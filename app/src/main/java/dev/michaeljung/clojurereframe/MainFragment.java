@@ -47,7 +47,7 @@ public class MainFragment extends MyFragment {
 
         subscribe("count", new EventListener() {
             @Override
-            public void onEvent(String event, JSONObject payload) {
+            public void onEvent(JSONObject payload) {
                 try {
                     textView.setText(Integer.toString(payload.getInt("value")));
                 } catch (JSONException e) {

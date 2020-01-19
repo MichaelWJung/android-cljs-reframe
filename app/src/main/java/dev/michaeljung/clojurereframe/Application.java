@@ -25,10 +25,10 @@ public class Application extends android.app.Application {
 
     private class Subscription {
         private final String id;
-        private final String query;
+        private final JSONArray query;
         private final EventListener listener;
 
-        private Subscription(String id, String query, EventListener listener) {
+        private Subscription(String id, JSONArray query, EventListener listener) {
             this.id = id;
             this.query = query;
             this.listener = listener;
@@ -92,17 +92,11 @@ public class Application extends android.app.Application {
 
     }
 
-    void dispatch(String event) {
-        JSONArray array = new JSONArray();
-        array.put(event);
-        dispatch(array);
-    }
-
     void dispatch(JSONArray event) {
         clojure.emit("dispatch", event);
     }
 
-    void subscribe(String id, String query, EventListener listener) {
+    void subscribe(String id, JSONArray query, EventListener listener) {
         if (clojure_ready) {
             doSubscribe(id, query, listener);
         } else synchronized (this) {
@@ -118,7 +112,7 @@ public class Application extends android.app.Application {
         }
     }
 
-    private void doSubscribe(String id, String query, final EventListener listener) {
+    private void doSubscribe(String id, JSONArray query, final EventListener listener) {
         Log.v(LOG_TAG, "Do subscription for: " + id + ". Query: " + query);
 
         final MicroService.EventListener liquidcore_listener = new MicroService.EventListener() {
@@ -127,7 +121,7 @@ public class Application extends android.app.Application {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        listener.onEvent(event, payload);
+                        listener.onEvent(payload);
                     }
                 });
             }
@@ -137,9 +131,7 @@ public class Application extends android.app.Application {
         JSONObject payload = new JSONObject();
         try {
             payload.put("id", id);
-            JSONArray array = new JSONArray();
-            array.put(query);
-            payload.put("query", array);
+            payload.put("query", query);
         } catch (JSONException e) {
             e.printStackTrace();
         }
