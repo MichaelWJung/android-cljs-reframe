@@ -12,7 +12,6 @@ import org.liquidplayer.service.MicroService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.EventListener;
 
 public class Application extends android.app.Application {
 
@@ -27,9 +26,9 @@ public class Application extends android.app.Application {
     private class Subscription {
         private final String id;
         private final String query;
-        private final MicroService.EventListener listener;
+        private final EventListener listener;
 
-        private Subscription(String id, String query, MicroService.EventListener listener) {
+        private Subscription(String id, String query, EventListener listener) {
             this.id = id;
             this.query = query;
             this.listener = listener;
@@ -96,10 +95,14 @@ public class Application extends android.app.Application {
     void dispatch(String event) {
         JSONArray array = new JSONArray();
         array.put(event);
-        clojure.emit("dispatch", array);
+        dispatch(array);
     }
 
-    void subscribe(String id, String query, MicroService.EventListener listener) {
+    void dispatch(JSONArray event) {
+        clojure.emit("dispatch", event);
+    }
+
+    void subscribe(String id, String query, EventListener listener) {
         if (clojure_ready) {
             doSubscribe(id, query, listener);
         } else synchronized (this) {
@@ -115,9 +118,22 @@ public class Application extends android.app.Application {
         }
     }
 
-    private void doSubscribe(String id, String query, MicroService.EventListener listener) {
+    private void doSubscribe(String id, String query, final EventListener listener) {
         Log.v(LOG_TAG, "Do subscription for: " + id + ". Query: " + query);
-        clojure.addEventListener(id, listener);
+
+        final MicroService.EventListener liquidcore_listener = new MicroService.EventListener() {
+            @Override
+            public void onEvent(MicroService service, final String event, final JSONObject payload) {
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        listener.onEvent(event, payload);
+                    }
+                });
+            }
+        };
+        clojure.addEventListener(id, liquidcore_listener);
+
         JSONObject payload = new JSONObject();
         try {
             payload.put("id", id);

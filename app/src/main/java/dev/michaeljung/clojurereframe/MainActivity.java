@@ -40,23 +40,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        final MicroService.EventListener updateListener = new MicroService.EventListener() {
+        app.subscribe(updateListenerId, "count", new EventListener() {
             @Override
-            public void onEvent(MicroService service, String event, final JSONObject payload) {
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            textView.setText(Integer.toString(payload.getInt("value")));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
+            public void onEvent(String event, JSONObject payload) {
+                try {
+                    textView.setText(Integer.toString(payload.getInt("value")));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
-        };
-
-        app.subscribe(updateListenerId, "count", updateListener);
+        });
     }
 
     @Override
