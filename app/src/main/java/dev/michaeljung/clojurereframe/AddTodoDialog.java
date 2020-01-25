@@ -13,8 +13,29 @@ import androidx.fragment.app.DialogFragment;
 
 public class AddTodoDialog extends DialogFragment {
 
+    private EditText input = null;
+    private String text = null;
+
     public interface AddTodoDialogListener {
         void onFinishAddTodoDialog(String todoText);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            if (savedInstanceState.keySet().contains("title")) {
+                text = savedInstanceState.getString("title");
+            }
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        if (input != null) {
+            outState.putString("title", input.getText().toString());
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @NonNull
@@ -23,8 +44,11 @@ public class AddTodoDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Add todo");
 
-        final EditText input = new EditText(getActivity());
+        input = new EditText(getActivity());
         input.setInputType(InputType.TYPE_CLASS_TEXT);
+        if (text != null) {
+            input.setText(text);
+        }
         builder.setView(input);
 
         builder.setPositiveButton("Add", new DialogInterface.OnClickListener() {

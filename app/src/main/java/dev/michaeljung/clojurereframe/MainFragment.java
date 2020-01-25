@@ -127,6 +127,12 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
         dispatch(event);
     }
 
+    public void openEditTodoDialog(int id, String title) {
+        EditTodoDialog dialog = new EditTodoDialog(id, title);
+        dialog.setTargetFragment(MainFragment.this, 0);
+        dialog.show(getFragmentManager(), "edit-todo");
+    }
+
     @Override
     public void onFinishAddTodoDialog(String todoText) {
         JSONArray event = new JSONArray();
@@ -141,6 +147,13 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
         event.put("save");
         event.put(id);
         event.put(todoText);
+        MainFragment.this.dispatch(event);
+    }
+
+    public void deleteTodo(int id) {
+        JSONArray event = new JSONArray();
+        event.put("delete-todo");
+        event.put(id);
         MainFragment.this.dispatch(event);
     }
 }

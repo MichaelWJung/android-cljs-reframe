@@ -11,10 +11,14 @@ import android.graphics.drawable.VectorDrawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -69,17 +73,9 @@ class TodosAdapter extends RecyclerView.Adapter {
             final boolean done = todo.getBoolean("done");
 
             todoViewHolder.id = id;
+            todoViewHolder.title = title;
             todoViewHolder.todo_checkbox.setText(title);
             todoViewHolder.todo_checkbox.setChecked(done);
-            todoViewHolder.todo_checkbox.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View v) {
-                    EditTodoDialog dialog = new EditTodoDialog(id, title);
-                    dialog.setTargetFragment(fragment, 0);
-                    dialog.show(fragment.getFragmentManager(), "edit-todo");
-                    return true;
-                }
-            });
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -95,10 +91,13 @@ class TodosAdapter extends RecyclerView.Adapter {
             for (String key : diff.keySet()) {
                 switch (key) {
                     case "title":
-                        todoViewHolder.todo_checkbox.setText(diff.getString("title"));
+                        final String title = diff.getString("title");
+                        todoViewHolder.title = title;
+                        todoViewHolder.todo_checkbox.setText(title);
                         break;
                     case "done":
-                        todoViewHolder.todo_checkbox.setChecked(diff.getBoolean("done"));
+                        final boolean done = diff.getBoolean("done");
+                        todoViewHolder.todo_checkbox.setChecked(done);
                         break;
                 }
             }
@@ -110,21 +109,50 @@ class TodosAdapter extends RecyclerView.Adapter {
         return todos.length();
     }
 
-    class TodoViewHolder extends RecyclerView.ViewHolder
-            implements View.OnClickListener {
+    class TodoViewHolder extends RecyclerView.ViewHolder {
         public final CheckBox todo_checkbox;
+        public final ImageView menu_button;
         public int id;
+        public String title;
 
         public TodoViewHolder(@NonNull View itemView) {
             super(itemView);
             todo_checkbox = (CheckBox) itemView.findViewById(R.id.todo_checkbox);
-            todo_checkbox.setOnClickListener(this);
+            todo_checkbox.setOnClickListener(new CheckBoxOnClickListener());
+            menu_button = (ImageView) itemView.findViewById(R.id.todo_menu);
+            menu_button.setOnClickListener(new MenuOnClickListener());
             id = -1;
+            title = "";
         }
 
-        @Override
-        public void onClick(View v) {
-            fragment.toggleChecked(id);
+        class CheckBoxOnClickListener implements View.OnClickListener {
+            @Override
+            public void onClick(View v) {
+                fragment.toggleChecked(id);
+            }
+        }
+
+        class MenuOnClickListener implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.menu_edit:
+                        fragment.openEditTodoDialog(id, title);
+                        break;
+                    case R.id.menu_delete:
+                        fragment.deleteTodo(id);
+                }
+                return true;
+            }
+
+            @Override
+            public void onClick(View v) {
+                PopupMenu popup = new PopupMenu(fragment.getContext(), v);
+                MenuInflater inflater = popup.getMenuInflater();
+                inflater.inflate(R.menu.todo_item_popup_menu, popup.getMenu());
+                popup.setOnMenuItemClickListener(this);
+                popup.show();
+            }
         }
     }
 }

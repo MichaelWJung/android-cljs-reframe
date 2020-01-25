@@ -13,16 +13,40 @@ import androidx.fragment.app.DialogFragment;
 
 public class EditTodoDialog extends DialogFragment {
 
-    private final int todoId;
-    private final String title;
+    private int todoId;
+    private String title;
+    private EditText input;
 
     public interface EditTodoDialogListener {
         void onFinishEditTodoDialog(int id, String todoText);
     }
 
-    public EditTodoDialog(int todoId, String title) {
+    public EditTodoDialog() {
+    }
+
+    EditTodoDialog(int todoId, String title) {
         this.todoId = todoId;
         this.title = title;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            todoId = savedInstanceState.getInt("id");
+            title = savedInstanceState.getString("title");
+        }
+        super.onCreate(savedInstanceState);
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt("id", todoId);
+        if (input != null) {
+            outState.putString("title", input.getText().toString());
+        } else {
+            outState.putString("title", title);
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @NonNull
@@ -31,7 +55,7 @@ public class EditTodoDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Edit todo");
 
-        final EditText input = new EditText(getActivity());
+        input = new EditText(getActivity());
         input.setText(title);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
