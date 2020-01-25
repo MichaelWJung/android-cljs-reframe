@@ -18,7 +18,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDialogListener {
+public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDialogListener, EditTodoDialog.EditTodoDialogListener {
 
     private TodosAdapter todosAdapter;
 
@@ -131,6 +131,15 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
     public void onFinishAddTodoDialog(String todoText) {
         JSONArray event = new JSONArray();
         event.put("add-todo");
+        event.put(todoText);
+        MainFragment.this.dispatch(event);
+    }
+
+    @Override
+    public void onFinishEditTodoDialog(int id, String todoText) {
+        JSONArray event = new JSONArray();
+        event.put("save");
+        event.put(id);
         event.put(todoText);
         MainFragment.this.dispatch(event);
     }

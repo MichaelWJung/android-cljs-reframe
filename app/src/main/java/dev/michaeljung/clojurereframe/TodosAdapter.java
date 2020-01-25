@@ -63,10 +63,23 @@ class TodosAdapter extends RecyclerView.Adapter {
         try {
             JSONObject todo = todos.getJSONObject(position);
             TodoViewHolder todoViewHolder = (TodoViewHolder) holder;
-            todoViewHolder.todo_checkbox.setText(todo.getString("title"));
-            todoViewHolder.todo_checkbox.setChecked(todo.getBoolean("done"));
-            androidx.appcompat.widget.AppCompatCheckBox checkBox;
-            todoViewHolder.id = todo.getInt("id");
+
+            final int id = todo.getInt("id");
+            final String title = todo.getString("title");
+            final boolean done = todo.getBoolean("done");
+
+            todoViewHolder.id = id;
+            todoViewHolder.todo_checkbox.setText(title);
+            todoViewHolder.todo_checkbox.setChecked(done);
+            todoViewHolder.todo_checkbox.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    EditTodoDialog dialog = new EditTodoDialog(id, title);
+                    dialog.setTargetFragment(fragment, 0);
+                    dialog.show(fragment.getFragmentManager(), "edit-todo");
+                    return true;
+                }
+            });
         } catch (JSONException e) {
             e.printStackTrace();
         }
