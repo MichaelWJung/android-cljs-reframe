@@ -1,6 +1,7 @@
 (ns app.events
   (:require
     [app.db :refer [default-db]]
+    [app.android :refer [todos->store]]
     [re-frame.core :as rf]
     [cljs.spec.alpha :as s]))
 
@@ -12,8 +13,11 @@
 
 (def check-spec-interceptor (rf/after (partial check-and-throw :app.db/db)))
 
+(def ->store (rf/after todos->store))
+
 (def todo-interceptors [check-spec-interceptor
-                        (rf/path :todos)])
+                        (rf/path :todos)
+                        ->store])
 
 (defn allocate-next-id
   "Returns the next todo id.
@@ -24,8 +28,9 @@
 
 (rf/reg-event-db
   :initialize-db
-  (fn [_ _]
-    default-db))
+  [check-spec-interceptor]
+  (fn [_ [_ stored]]
+    (assoc default-db :todos stored)))
 
 (rf/reg-event-db
   :set-showing

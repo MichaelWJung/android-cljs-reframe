@@ -1,5 +1,6 @@
 (ns app.db
-  (:require [cljs.spec.alpha :as s]))
+  (:require [cljs.spec.alpha :as s]
+            [re-frame.core :as rf]))
 
 (s/def ::id int?)
 (s/def ::title string?)

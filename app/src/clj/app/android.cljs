@@ -1,5 +1,6 @@
 (ns app.android
-  (:require [reagent.ratom :as ra]
+  (:require [cljs.reader]
+            [reagent.ratom :as ra]
             [re-frame.core :as rf]))
 
 (def reactions (atom {}))
@@ -19,7 +20,7 @@
           nil)
         (recur)))))
 
-(defn setup-android-interaction []
+(defn setup-android-interaction [init-fn]
   (.on js/LiquidCore
        "dispatch"
        (fn [map]
@@ -45,7 +46,23 @@
        (fn [id-string]
          (let [id (keyword (js->clj id-string))]
            (if-let [reaction (get-and-remove-reaction id)]
-             (remove-watch reaction id))))))
+             (remove-watch reaction id)))))
 
-(defn send-ready-to-android []
+  (.on js/LiquidCore
+       "initialize"
+       (fn [init]
+         (let [todos (into (sorted-map)
+                           (-> init
+                               js->clj
+                               cljs.reader/read-string))]
+           (init-fn todos)))))
+
+(defn todos->store
+  [todos]
+  (.emit js/LiquidCore "store" (clj->js {:value (str todos)})))
+
+(defn send-waiting-for-db []
+  (.emit js/LiquidCore "waiting-for-db"))
+
+(defn send-ready []
   (.emit js/LiquidCore "ready"))

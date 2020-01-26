@@ -1,5 +1,6 @@
 package dev.michaeljung.clojurereframe;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -7,10 +8,18 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.liquidplayer.javascript.JSON;
 import org.liquidplayer.service.MicroService;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class Application extends android.app.Application {
@@ -42,6 +51,23 @@ public class Application extends android.app.Application {
         unregistered_subscriptions = new ArrayList<>();
         waiting_ready_listeners = new ArrayList<>();
 
+        final MicroService.EventListener readDbListener = new MicroService.EventListener() {
+            @Override
+            public void onEvent(MicroService service, String event, JSONObject payload) {
+                try {
+                    File file = new File(Application.this.getFilesDir(), "db");
+                    byte[] encoded = Files.readAllBytes(file.toPath());
+                    String content = new String(encoded, StandardCharsets.UTF_8);
+                    Log.v(LOG_TAG, "File db successfully loaded. Content: " + content);
+                    clojure.emit("initialize", content);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.v(LOG_TAG, "Could not load file. Initializing with empty set of todos");
+                    clojure.emit("initialize", "{}");
+                }
+            }
+        };
+
         final MicroService.EventListener readyListener = new MicroService.EventListener() {
             @Override
             public void onEvent(MicroService service, String event, JSONObject payload) {
@@ -63,10 +89,26 @@ public class Application extends android.app.Application {
             }
         };
 
+        final MicroService.EventListener storeListener = new MicroService.EventListener() {
+            @Override
+            public void onEvent(MicroService service, String event, JSONObject payload) {
+                try {
+                    String db = payload.getString("value");
+                    FileOutputStream fos = Application.this.openFileOutput("db", Context.MODE_PRIVATE);
+                    fos.write(db.getBytes(StandardCharsets.UTF_8));
+                    Log.v(LOG_TAG, "Saved todos to file. Content: " + db);
+                } catch (JSONException | IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
         final MicroService.ServiceStartListener startListener = new MicroService.ServiceStartListener() {
             @Override
             public void onStart(MicroService service) {
+                clojure.addEventListener("waiting-for-db", readDbListener);
                 clojure.addEventListener("ready", readyListener);
+                clojure.addEventListener("store", storeListener);
             }
         };
 
