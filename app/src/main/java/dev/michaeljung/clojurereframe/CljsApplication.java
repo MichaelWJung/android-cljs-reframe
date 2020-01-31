@@ -19,9 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 
-public class Application extends android.app.Application {
+public class CljsApplication extends android.app.Application {
 
-    private static final String LOG_TAG = Application.class.getSimpleName();
+    private static final String LOG_TAG = CljsApplication.class.getSimpleName();
     private static final String DB_FILE_NAME = "db";
 
     private MicroService clojure;
@@ -91,8 +91,7 @@ public class Application extends android.app.Application {
     }
 
     void dispatch(JSONArray event) {
-        // TODO: clojure might not be ready
-        clojure.emit("dispatch", event);
+        doWhenReady(() -> clojure.emit("dispatch", event));
     }
 
     synchronized void subscribe(String id, JSONArray query, EventListener listener) {
@@ -108,7 +107,7 @@ public class Application extends android.app.Application {
         if (clojure_ready) {
             clojure.emit("deregister", id);
         } else {
-            // TODO: remove from unregistered_subscriptions
+            unregistered_subscriptions.removeIf(sub -> sub.id == id);
         }
     }
 
@@ -128,7 +127,7 @@ public class Application extends android.app.Application {
     }
 
     private synchronized void carryOutReadyActions() {
-        Application.this.clojure_ready = true;
+        CljsApplication.this.clojure_ready = true;
         runWaitingReadyListeners();
         registerPendingSubscriptions();
     }
@@ -152,27 +151,21 @@ public class Application extends android.app.Application {
     private void doSubscribe(String id, JSONArray query, final EventListener listener) {
         Log.v(LOG_TAG, "Do subscription for: " + id + ". Query: " + query);
 
-        final MicroService.EventListener liquidcore_listener = new MicroService.EventListener() {
-            @Override
-            public void onEvent(MicroService service, final String event, final JSONObject payload) {
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        listener.onEvent(payload);
-                    }
-                });
-            }
-        };
-        clojure.addEventListener(id, liquidcore_listener);
+        clojure.addEventListener(id, toLiquidCoreUiThreadListener(listener));
 
         JSONObject payload = new JSONObject();
         try {
             payload.put("id", id);
             payload.put("query", query);
+            clojure.emit("register", payload);
         } catch (JSONException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Error building JSONObject for subscription");
         }
-        clojure.emit("register", payload);
+    }
+
+    private MicroService.EventListener toLiquidCoreUiThreadListener(final EventListener listener) {
+        return (service, event, payload) -> new Handler(Looper.getMainLooper()).post(
+                () -> listener.onEvent(payload));
     }
 
     private void initializeDbFromFile() {
@@ -205,7 +198,7 @@ public class Application extends android.app.Application {
 
     private void writeDbFile(String content) {
         try {
-            FileOutputStream fos = Application.this.openFileOutput(DB_FILE_NAME, Context.MODE_PRIVATE);
+            FileOutputStream fos = CljsApplication.this.openFileOutput(DB_FILE_NAME, Context.MODE_PRIVATE);
             fos.write(content.getBytes(StandardCharsets.UTF_8));
             Log.v(LOG_TAG, "Saved todos to file. Content: " + content);
         } catch (IOException e) {

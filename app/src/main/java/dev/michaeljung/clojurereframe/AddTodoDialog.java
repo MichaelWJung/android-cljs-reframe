@@ -44,29 +44,26 @@ public class AddTodoDialog extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Add todo");
 
-        input = new EditText(getActivity());
+        input = createEditText();
+        builder.setView(input);
+
+        builder.setPositiveButton("Add", (dialog, which) -> {
+            AddTodoDialogListener listener = (AddTodoDialogListener) getTargetFragment();
+            listener.onFinishAddTodoDialog(input.getText().toString());
+            dialog.dismiss();
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        return builder.create();
+    }
+
+    private EditText createEditText() {
+        EditText input = new EditText(getActivity());
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         if (text != null) {
             input.setText(text);
         }
-        builder.setView(input);
-
-        builder.setPositiveButton("Add", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                AddTodoDialogListener listener = (AddTodoDialogListener) getTargetFragment();
-                listener.onFinishAddTodoDialog(input.getText().toString());
-                dialog.dismiss();
-            }
-        });
-
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        return builder.create();
+        return input;
     }
 }

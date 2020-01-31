@@ -6,7 +6,7 @@
     tools:context=".MainActivity">
 
     <fragment
-        android:name="dev.michaeljung.clojurereframe.MainFragment"
+        android:name="dev.michaeljung.clojurereframe.TodoFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/main_fragment" />

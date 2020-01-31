@@ -1,29 +1,16 @@
 package dev.michaeljung.clojurereframe;
 
-import android.animation.Animator;
-import android.animation.ObjectAnimator;
-import android.content.Context;
-import android.graphics.drawable.Animatable2;
-import android.graphics.drawable.AnimatedStateListDrawable;
-import android.graphics.drawable.AnimatedVectorDrawable;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.VectorDrawable;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.widget.AppCompatCheckBox;
-import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,9 +24,9 @@ class TodosAdapter extends RecyclerView.Adapter {
 
     private LayoutInflater inflater;
     private JSONArray todos;
-    private MainFragment fragment;
+    private TodoFragment fragment;
 
-    TodosAdapter(MainFragment fragment) {
+    TodosAdapter(TodoFragment fragment) {
         this.inflater = LayoutInflater.from(fragment.getContext());
         this.fragment = fragment;
         todos = new JSONArray();

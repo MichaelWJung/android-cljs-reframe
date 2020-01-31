@@ -11,18 +11,16 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.tabs.TabItem;
 import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
-public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDialogListener, EditTodoDialog.EditTodoDialogListener {
+public class TodoFragment extends CljsFragment implements AddTodoDialog.AddTodoDialogListener, EditTodoDialog.EditTodoDialogListener {
 
     private TodosAdapter todosAdapter;
 
-    public MainFragment() {
+    public TodoFragment() {
     }
 
     @Nullable
@@ -59,7 +57,7 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
                 } else {
                     return;
                 }
-                MainFragment.this.dispatch(query);
+                TodoFragment.this.dispatch(query);
             }
 
             @Override
@@ -75,61 +73,52 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
 
         final FloatingActionButton addTodoButton = view.findViewById(R.id.button_add_todo);
 
-        addTodoButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AddTodoDialog dialog = new AddTodoDialog();
-                dialog.setTargetFragment(MainFragment.this, 0);
-                dialog.show(getFragmentManager(), "add-todo");
+        addTodoButton.setOnClickListener(v -> {
+            AddTodoDialog dialog = new AddTodoDialog();
+            dialog.setTargetFragment(TodoFragment.this, 0);
+            dialog.show(getFragmentManager(), "add-todo");
+        });
+
+        subscribe("visible-todos", payload -> {
+            try {
+                todosAdapter.setTodos(payload.getJSONArray("value"));
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
 
-        subscribe("visible-todos", new EventListener() {
-            @Override
-            public void onEvent(JSONObject payload) {
-                try {
-                    todosAdapter.setTodos(payload.getJSONArray("value"));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        subscribe("showing", payload -> {
+            int id = 0;
+            String showing = "";
+            try {
+                showing = payload.getString("value");
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-        });
-
-        subscribe("showing", new EventListener() {
-            @Override
-            public void onEvent(JSONObject payload) {
-                int id = 0;
-                String showing = "";
-                try {
-                    showing = payload.getString("value");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                switch (showing) {
-                    case "all":
-                        tabAll.select();
-                        break;
-                    case "active":
-                        tabActive.select();
-                        break;
-                    case "done":
-                        tabDone.select();
-                        break;
-                }
+            switch (showing) {
+                case "all":
+                    tabAll.select();
+                    break;
+                case "active":
+                    tabActive.select();
+                    break;
+                case "done":
+                    tabDone.select();
+                    break;
             }
         });
     }
 
-    public void toggleChecked(int id) {
+    void toggleChecked(int id) {
         JSONArray event = new JSONArray();
         event.put("toggle-done");
         event.put(id);
         dispatch(event);
     }
 
-    public void openEditTodoDialog(int id, String title) {
+    void openEditTodoDialog(int id, String title) {
         EditTodoDialog dialog = new EditTodoDialog(id, title);
-        dialog.setTargetFragment(MainFragment.this, 0);
+        dialog.setTargetFragment(TodoFragment.this, 0);
         dialog.show(getFragmentManager(), "edit-todo");
     }
 
@@ -138,7 +127,7 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
         JSONArray event = new JSONArray();
         event.put("add-todo");
         event.put(todoText);
-        MainFragment.this.dispatch(event);
+        TodoFragment.this.dispatch(event);
     }
 
     @Override
@@ -147,13 +136,13 @@ public class MainFragment extends MyFragment implements AddTodoDialog.AddTodoDia
         event.put("save");
         event.put(id);
         event.put(todoText);
-        MainFragment.this.dispatch(event);
+        TodoFragment.this.dispatch(event);
     }
 
     public void deleteTodo(int id) {
         JSONArray event = new JSONArray();
         event.put("delete-todo");
         event.put(id);
-        MainFragment.this.dispatch(event);
+        TodoFragment.this.dispatch(event);
     }
 }

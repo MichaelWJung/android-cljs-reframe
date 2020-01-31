@@ -3,20 +3,28 @@ package dev.michaeljung.clojurereframe;
 import androidx.fragment.app.Fragment;
 
 import org.json.JSONArray;
-import org.liquidplayer.javascript.JSON;
 
 import java.util.ArrayList;
 import java.util.UUID;
 
-public abstract class MyFragment extends Fragment {
+public abstract class CljsFragment extends Fragment {
     private ArrayList<String> listenerIds;
 
-    protected MyFragment() {
+    CljsFragment() {
         listenerIds = new ArrayList<>();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        for (String id : listenerIds) {
+            CljsApplication app = (CljsApplication) getActivity().getApplicationContext();
+            app.unsubscribe(id);
+        }
+    }
+
     protected void doWhenReady(Runnable runnable) {
-        Application app = (Application) getActivity().getApplicationContext();
+        CljsApplication app = (CljsApplication) getActivity().getApplicationContext();
         app.doWhenReady(runnable);
     }
 
@@ -32,7 +40,7 @@ public abstract class MyFragment extends Fragment {
 
     protected String subscribe(JSONArray query, EventListener listener) {
         String listenerId = UUID.randomUUID().toString();
-        Application app = (Application) getActivity().getApplicationContext();
+        CljsApplication app = (CljsApplication) getActivity().getApplicationContext();
         app.subscribe(listenerId, query, listener);
         listenerIds.add(listenerId);
         return listenerId;
@@ -43,16 +51,7 @@ public abstract class MyFragment extends Fragment {
     }
 
     protected void dispatch(JSONArray event) {
-        Application app = (Application) getActivity().getApplicationContext();
+        CljsApplication app = (CljsApplication) getActivity().getApplicationContext();
         app.dispatch(event);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        for (String id : listenerIds) {
-            Application app = (Application) getActivity().getApplicationContext();
-            app.unsubscribe(id);
-        }
     }
 }
