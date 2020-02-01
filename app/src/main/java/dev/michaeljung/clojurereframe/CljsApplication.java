@@ -23,6 +23,7 @@ public class CljsApplication extends android.app.Application {
 
     private static final String LOG_TAG = CljsApplication.class.getSimpleName();
     private static final String DB_FILE_NAME = "db";
+    private static final String EMPTY_APP_DB = "{}";
 
     private MicroService clojure;
     private boolean clojure_ready;
@@ -49,32 +50,10 @@ public class CljsApplication extends android.app.Application {
         unregistered_subscriptions = new ArrayList<>();
         waiting_ready_listeners = new ArrayList<>();
 
-        final MicroService.EventListener readDbListener = new MicroService.EventListener() {
-            @Override
-            public void onEvent(MicroService service, String event, JSONObject payload) {
-                initializeDbFromFile();
-            }
-        };
-        final MicroService.EventListener storeListener = new MicroService.EventListener() {
-            @Override
-            public void onEvent(MicroService service, String event, JSONObject payload) {
-                saveDbToFile(payload);
-            }
-        };
-        final MicroService.EventListener readyListener = new MicroService.EventListener() {
-            @Override
-            public void onEvent(MicroService service, String event, JSONObject payload) {
-                carryOutReadyActions();
-            }
-        };
-
-        final MicroService.ServiceStartListener startListener = new MicroService.ServiceStartListener() {
-            @Override
-            public void onStart(MicroService service) {
-                clojure.addEventListener("waiting-for-db", readDbListener);
-                clojure.addEventListener("store", storeListener);
-                clojure.addEventListener("ready", readyListener);
-            }
+        final MicroService.ServiceStartListener startListener = service -> {
+            clojure.addEventListener("waiting-for-db", (service1, event, payload) -> initializeDbFromFile());
+            clojure.addEventListener("store", (service1, event, payload) -> saveDbToFile(payload));
+            clojure.addEventListener("ready", (service1, event, payload) -> carryOutReadyActions());
         };
 
         startClojureMicroService(startListener);
@@ -107,7 +86,7 @@ public class CljsApplication extends android.app.Application {
         if (clojure_ready) {
             clojure.emit("deregister", id);
         } else {
-            unregistered_subscriptions.removeIf(sub -> sub.id == id);
+            unregistered_subscriptions.removeIf(sub -> sub.id.equals(id));
         }
     }
 
@@ -122,7 +101,7 @@ public class CljsApplication extends android.app.Application {
         try {
             return new URI("android.resource://dev.michaeljung.clojurereframe/raw/app");
         } catch (URISyntaxException e) {
-            throw new RuntimeException("Error loading ClojureScript code");
+            throw new RuntimeException(e);
         }
     }
 
@@ -159,7 +138,7 @@ public class CljsApplication extends android.app.Application {
             payload.put("query", query);
             clojure.emit("register", payload);
         } catch (JSONException e) {
-            throw new RuntimeException("Error building JSONObject for subscription");
+            throw new RuntimeException(e);
         }
     }
 
@@ -171,7 +150,7 @@ public class CljsApplication extends android.app.Application {
     private void initializeDbFromFile() {
         String content = readDbFile();
         if (content == null) {
-            content = "{}";
+            content = EMPTY_APP_DB;
         }
         clojure.emit("initialize", content);
     }
@@ -180,7 +159,7 @@ public class CljsApplication extends android.app.Application {
         try {
             writeDbFile(db.getString("value"));
         } catch (JSONException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -202,7 +181,7 @@ public class CljsApplication extends android.app.Application {
             fos.write(content.getBytes(StandardCharsets.UTF_8));
             Log.v(LOG_TAG, "Saved todos to file. Content: " + content);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 }

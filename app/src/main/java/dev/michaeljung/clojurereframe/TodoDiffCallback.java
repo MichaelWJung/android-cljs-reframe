@@ -62,7 +62,7 @@ public class TodoDiffCallback extends DiffUtil.Callback {
             JSONObject newTodo = newTodos.getJSONObject(newItemPosition);
 
             Bundle diff = new Bundle();
-            if (oldTodo.getString("title") != newTodo.getString("title")) {
+            if (!oldTodo.getString("title").equals(newTodo.getString("title"))) {
                 diff.putString("title", newTodo.getString("title"));
             }
             if (oldTodo.getBoolean("done") != newTodo.getBoolean("done")) {
