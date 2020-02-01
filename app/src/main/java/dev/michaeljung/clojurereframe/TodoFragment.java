@@ -16,9 +16,16 @@ import com.google.android.material.tabs.TabLayout;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-public class TodoFragment extends CljsFragment implements AddTodoDialog.AddTodoDialogListener, EditTodoDialog.EditTodoDialogListener {
+import java.util.HashMap;
 
-    private TodosAdapter todosAdapter;
+public class TodoFragment extends CljsFragment implements AddTodoDialog.AddTodoDialogListener, EditTodoDialog.EditTodoDialogListener, TodosAdapter.Callbacks {
+
+    private static final String EDIT_TODO_TAG = "edit-todo";
+    public static final String ADD_TODO_TAG = "add-todo";
+
+    enum Tab {
+        ALL, ACTIVE, DONE
+    }
 
     public TodoFragment() {
     }
@@ -33,116 +40,166 @@ public class TodoFragment extends CljsFragment implements AddTodoDialog.AddTodoD
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        todosAdapter = new TodosAdapter(this);
-        RecyclerView todosView = view.findViewById(R.id.todos_view);
-        todosView.setAdapter(todosAdapter);
-        todosView.setLayoutManager(new LinearLayoutManager(getActivity()));
-
-        final TabLayout tabLayout = view.findViewById(R.id.tab_layout);
-        final TabLayout.Tab tabAll = tabLayout.getTabAt(0);
-        final TabLayout.Tab tabActive = tabLayout.getTabAt(1);
-        final TabLayout.Tab tabDone = tabLayout.getTabAt(2);
-
-        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                JSONArray query = new JSONArray();
-                query.put("set-showing");
-                if (tab == tabAll) {
-                    query.put("all");
-                } else if (tab == tabActive) {
-                    query.put("active");
-                } else if (tab == tabDone) {
-                    query.put("done");
-                } else {
-                    return;
-                }
-                TodoFragment.this.dispatch(query);
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-
-            }
-        });
-
-        final FloatingActionButton addTodoButton = view.findViewById(R.id.button_add_todo);
-
-        addTodoButton.setOnClickListener(v -> {
-            AddTodoDialog dialog = new AddTodoDialog();
-            dialog.setTargetFragment(TodoFragment.this, 0);
-            dialog.show(getFragmentManager(), "add-todo");
-        });
-
-        subscribe("visible-todos", payload -> {
-            try {
-                todosAdapter.setTodos(payload.getJSONArray("value"));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        });
-
-        subscribe("showing", payload -> {
-            int id = 0;
-            String showing = "";
-            try {
-                showing = payload.getString("value");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            switch (showing) {
-                case "all":
-                    tabAll.select();
-                    break;
-                case "active":
-                    tabActive.select();
-                    break;
-                case "done":
-                    tabDone.select();
-                    break;
-            }
-        });
+        setupTodosView(view);
+        setupTabs(view);
+        setupAddTodoButton(view);
     }
 
-    void toggleChecked(int id) {
-        JSONArray event = new JSONArray();
+    @Override
+    public void onFinishAddTodoDialog(String todoText) {
+        final JSONArray event = new JSONArray();
+        event.put("add-todo");
+        event.put(todoText);
+        dispatch(event);
+    }
+
+    @Override
+    public void onFinishEditTodoDialog(int id, String todoText) {
+        final JSONArray event = new JSONArray();
+        event.put("save");
+        event.put(id);
+        event.put(todoText);
+        dispatch(event);
+    }
+
+    @Override
+    public void toggleChecked(int id) {
+        final JSONArray event = new JSONArray();
         event.put("toggle-done");
         event.put(id);
         dispatch(event);
     }
 
-    void openEditTodoDialog(int id, String title) {
-        EditTodoDialog dialog = new EditTodoDialog(id, title);
-        dialog.setTargetFragment(TodoFragment.this, 0);
-        dialog.show(getFragmentManager(), "edit-todo");
-    }
-
     @Override
-    public void onFinishAddTodoDialog(String todoText) {
-        JSONArray event = new JSONArray();
-        event.put("add-todo");
-        event.put(todoText);
-        TodoFragment.this.dispatch(event);
-    }
-
-    @Override
-    public void onFinishEditTodoDialog(int id, String todoText) {
-        JSONArray event = new JSONArray();
-        event.put("save");
-        event.put(id);
-        event.put(todoText);
-        TodoFragment.this.dispatch(event);
-    }
-
     public void deleteTodo(int id) {
-        JSONArray event = new JSONArray();
+        final JSONArray event = new JSONArray();
         event.put("delete-todo");
         event.put(id);
         TodoFragment.this.dispatch(event);
+    }
+
+    @Override
+    public void openEditTodoDialog(int id, String title) {
+        final EditTodoDialog dialog = new EditTodoDialog(id, title);
+        dialog.setTargetFragment(TodoFragment.this, 0);
+        assert getFragmentManager() != null;
+        dialog.show(getFragmentManager(), EDIT_TODO_TAG);
+    }
+
+    private void openAddTodoDialog() {
+        AddTodoDialog dialog = new AddTodoDialog();
+        dialog.setTargetFragment(TodoFragment.this, 0);
+        assert getFragmentManager() != null;
+        dialog.show(getFragmentManager(), ADD_TODO_TAG);
+    }
+
+    private void setupTodosView(@NonNull View fragmentView) {
+        final TodosAdapter todosAdapter = new TodosAdapter(getContext(), this);
+        final RecyclerView todosView = fragmentView.findViewById(R.id.todos_view);
+        todosView.setAdapter(todosAdapter);
+        todosView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        subscribeToVisibleTodos(todosAdapter);
+    }
+
+    private void setupTabs(@NonNull View fragmentView) {
+        final TabLayout tabLayout = fragmentView.findViewById(R.id.tab_layout);
+        final HashMap<Tab, TabLayout.Tab> tabs = createTabs(tabLayout);
+        tabLayout.addOnTabSelectedListener(new ShowingTabSelectedListener(tabs));
+        subscribeToShowing(tabs);
+    }
+
+    private void setupAddTodoButton(@NonNull View fragmentView) {
+        final FloatingActionButton addTodoButton = fragmentView.findViewById(R.id.button_add_todo);
+        addTodoButton.setOnClickListener(v -> openAddTodoDialog());
+    }
+
+    private void subscribeToShowing(HashMap<Tab, TabLayout.Tab> tabs) {
+        subscribe("showing", payload -> {
+            try {
+                String showing = payload.getString("value");
+                switch (showing) {
+                    case "all":
+                        tabs.get(Tab.ALL).select();
+                        break;
+                    case "active":
+                        tabs.get(Tab.ACTIVE).select();
+                        break;
+                    case "done":
+                        tabs.get(Tab.DONE).select();
+                        break;
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void subscribeToVisibleTodos(TodosAdapter todosAdapter) {
+        subscribe("visible-todos", payload -> {
+            try {
+                todosAdapter.setTodos(payload.getJSONArray("value"));
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private HashMap<Tab, TabLayout.Tab> createTabs(TabLayout tabLayout) {
+        HashMap<Tab, TabLayout.Tab> tabs = new HashMap<>();
+        for (Tab t : new Tab[]{Tab.ALL, Tab.ACTIVE, Tab.DONE}) {
+            TabLayout.Tab tab = tabLayout.newTab();
+            tab.setText(getTabText(t));
+            tabLayout.addTab(tab);
+            tabs.put(t, tab);
+        }
+        return tabs;
+    }
+
+    private String getTabText(Tab tab) {
+        switch (tab) {
+            case ALL:
+                return "All";
+            case ACTIVE:
+                return "Active";
+            case DONE:
+                return "Done";
+            default:
+                return null;
+        }
+    }
+
+    private class ShowingTabSelectedListener implements TabLayout.OnTabSelectedListener {
+        private final HashMap<Tab, TabLayout.Tab> tabs;
+
+        ShowingTabSelectedListener(HashMap<Tab, TabLayout.Tab> tabs) {
+            this.tabs = tabs;
+        }
+
+        @Override
+        public void onTabSelected(TabLayout.Tab tab) {
+            JSONArray query = new JSONArray();
+            query.put("set-showing");
+            int pos = tab.getPosition();
+            if (pos == tabs.get(Tab.ALL).getPosition()) {
+                query.put("all");
+            } else if (pos == tabs.get(Tab.ACTIVE).getPosition()) {
+                query.put("active");
+            } else if (pos == tabs.get(Tab.DONE).getPosition()) {
+                query.put("done");
+            } else {
+                return;
+            }
+            dispatch(query);
+        }
+
+        @Override
+        public void onTabUnselected(TabLayout.Tab tab) {
+
+        }
+
+        @Override
+        public void onTabReselected(TabLayout.Tab tab) {
+
+        }
     }
 }

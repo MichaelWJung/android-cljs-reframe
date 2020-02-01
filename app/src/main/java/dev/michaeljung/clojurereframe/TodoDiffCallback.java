@@ -14,7 +14,7 @@ public class TodoDiffCallback extends DiffUtil.Callback {
     private JSONArray newTodos;
     private JSONArray oldTodos;
 
-    TodoDiffCallback(JSONArray newTodos, JSONArray oldTodos) {
+    TodoDiffCallback(JSONArray oldTodos, JSONArray newTodos) {
         this.newTodos = newTodos;
         this.oldTodos = oldTodos;
     }
@@ -36,9 +36,8 @@ public class TodoDiffCallback extends DiffUtil.Callback {
             JSONObject newTodo = newTodos.getJSONObject(newItemPosition);
             return oldTodo.getInt("id") == newTodo.getInt("id");
         } catch (JSONException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return false;
     }
 
     @Override
@@ -46,12 +45,11 @@ public class TodoDiffCallback extends DiffUtil.Callback {
         try {
             JSONObject oldTodo = oldTodos.getJSONObject(oldItemPosition);
             JSONObject newTodo = newTodos.getJSONObject(newItemPosition);
-            return oldTodo.getString("title") == newTodo.getString("title") &&
+            return oldTodo.getString("title").equals(newTodo.getString("title")) &&
                    oldTodo.getBoolean("done") == newTodo.getBoolean("done");
         } catch (JSONException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return false;
     }
 
     @Nullable
@@ -73,9 +71,7 @@ public class TodoDiffCallback extends DiffUtil.Callback {
             }
             return diff;
         } catch (JSONException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return null;
-        //return super.getChangePayload(oldItemPosition, newItemPosition);
     }
 }

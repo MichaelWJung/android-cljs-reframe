@@ -14,27 +14,26 @@ import androidx.fragment.app.DialogFragment;
 public class AddTodoDialog extends DialogFragment {
 
     private EditText input = null;
-    private String text = null;
 
-    public interface AddTodoDialogListener {
+    interface AddTodoDialogListener {
         void onFinishAddTodoDialog(String todoText);
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String text = "";
         if (savedInstanceState != null) {
             if (savedInstanceState.keySet().contains("title")) {
                 text = savedInstanceState.getString("title");
             }
         }
+        input = createEditText(text);
     }
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        if (input != null) {
-            outState.putString("title", input.getText().toString());
-        }
+        outState.putString("title", input.getText().toString());
         super.onSaveInstanceState(outState);
     }
 
@@ -43,27 +42,26 @@ public class AddTodoDialog extends DialogFragment {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Add todo");
-
-        input = createEditText();
         builder.setView(input);
-
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            AddTodoDialogListener listener = (AddTodoDialogListener) getTargetFragment();
-            listener.onFinishAddTodoDialog(input.getText().toString());
-            dialog.dismiss();
-        });
-
+        builder.setPositiveButton("Add", new AddButtonListener());
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
         return builder.create();
     }
 
-    private EditText createEditText() {
+    private EditText createEditText(@NonNull String text) {
         EditText input = new EditText(getActivity());
         input.setInputType(InputType.TYPE_CLASS_TEXT);
-        if (text != null) {
-            input.setText(text);
-        }
+        input.setText(text);
         return input;
+    }
+
+    private class AddButtonListener implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            AddTodoDialogListener listener = (AddTodoDialogListener) getTargetFragment();
+            assert listener != null;
+            listener.onFinishAddTodoDialog(input.getText().toString());
+            dialog.dismiss();
+        }
     }
 }

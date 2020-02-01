@@ -17,7 +17,7 @@ public class EditTodoDialog extends DialogFragment {
     private String title;
     private EditText input;
 
-    public interface EditTodoDialogListener {
+    interface EditTodoDialogListener {
         void onFinishEditTodoDialog(int id, String todoText);
     }
 
@@ -31,21 +31,21 @@ public class EditTodoDialog extends DialogFragment {
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         if (savedInstanceState != null) {
             todoId = savedInstanceState.getInt("id");
             title = savedInstanceState.getString("title");
         }
-        super.onCreate(savedInstanceState);
+        if (title == null) {
+            title = "";
+        }
+        input = createEditText(title);
     }
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         outState.putInt("id", todoId);
-        if (input != null) {
-            outState.putString("title", input.getText().toString());
-        } else {
-            outState.putString("title", title);
-        }
+        outState.putString("title", input.getText().toString());
         super.onSaveInstanceState(outState);
     }
 
@@ -54,28 +54,26 @@ public class EditTodoDialog extends DialogFragment {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setTitle("Edit todo");
-
-        input = new EditText(getActivity());
-        input.setText(title);
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
-
-        builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                EditTodoDialogListener listener = (EditTodoDialogListener) getTargetFragment();
-                listener.onFinishEditTodoDialog(todoId, input.getText().toString());
-                dialog.dismiss();
-            }
-        });
-
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
+        builder.setPositiveButton("Save", new SaveButtonListener());
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         return builder.create();
+    }
+
+    private EditText createEditText(@NonNull String text) {
+        EditText input = new EditText(getActivity());
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(text);
+        return input;
+    }
+
+    private class SaveButtonListener implements DialogInterface.OnClickListener {
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            EditTodoDialogListener listener = (EditTodoDialogListener) getTargetFragment();
+            assert listener != null;
+            listener.onFinishEditTodoDialog(todoId, input.getText().toString());
+            dialog.dismiss();
+        }
     }
 }

@@ -1,5 +1,6 @@
 package dev.michaeljung.clojurereframe;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
@@ -22,24 +23,28 @@ import java.util.List;
 
 class TodosAdapter extends RecyclerView.Adapter {
 
-    private LayoutInflater inflater;
     private JSONArray todos;
-    private TodoFragment fragment;
+    private Context context;
+    private Callbacks callbacks;
+    private LayoutInflater inflater;
 
-    TodosAdapter(TodoFragment fragment) {
-        this.inflater = LayoutInflater.from(fragment.getContext());
-        this.fragment = fragment;
-        todos = new JSONArray();
+    interface Callbacks {
+        void toggleChecked(int id);
+        void openEditTodoDialog(int id, String title);
+        void deleteTodo(int id);
+    }
+
+    TodosAdapter(Context context, Callbacks callbacks) {
+        this.todos = new JSONArray();
+        this.context = context;
+        this.callbacks = callbacks;
+        this.inflater = LayoutInflater.from(context);
     }
 
     void setTodos(JSONArray todos) {
-        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new TodoDiffCallback(todos, this.todos));
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new TodoDiffCallback(this.todos, todos));
         diffResult.dispatchUpdatesTo(this);
-        try {
-            this.todos = new JSONArray(todos.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        this.todos = todos;
     }
 
     @NonNull
@@ -52,17 +57,10 @@ class TodosAdapter extends RecyclerView.Adapter {
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         try {
-            JSONObject todo = todos.getJSONObject(position);
-            TodoViewHolder todoViewHolder = (TodoViewHolder) holder;
-
-            final int id = todo.getInt("id");
-            final String title = todo.getString("title");
-            final boolean done = todo.getBoolean("done");
-
-            todoViewHolder.id = id;
-            todoViewHolder.title = title;
-            todoViewHolder.todo_checkbox.setText(title);
-            todoViewHolder.todo_checkbox.setChecked(done);
+            final JSONObject todo = todos.getJSONObject(position);
+            final TodoViewHolder todoViewHolder = (TodoViewHolder) holder;
+            todoViewHolder.todo_checkbox.setText(todo.getString("title"));
+            todoViewHolder.todo_checkbox.setChecked(todo.getBoolean("done"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -73,13 +71,12 @@ class TodosAdapter extends RecyclerView.Adapter {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads);
         } else {
-            TodoViewHolder todoViewHolder = (TodoViewHolder) holder;
-            Bundle diff = (Bundle) payloads.get(0);
+            final TodoViewHolder todoViewHolder = (TodoViewHolder) holder;
+            final Bundle diff = (Bundle) payloads.get(0);
             for (String key : diff.keySet()) {
                 switch (key) {
                     case "title":
                         final String title = diff.getString("title");
-                        todoViewHolder.title = title;
                         todoViewHolder.todo_checkbox.setText(title);
                         break;
                     case "done":
@@ -97,49 +94,65 @@ class TodosAdapter extends RecyclerView.Adapter {
     }
 
     class TodoViewHolder extends RecyclerView.ViewHolder {
-        public final CheckBox todo_checkbox;
-        public final ImageView menu_button;
-        public int id;
-        public String title;
+        final CheckBox todo_checkbox;
+        final ImageView menu_button;
 
-        public TodoViewHolder(@NonNull View itemView) {
+        TodoViewHolder(@NonNull View itemView) {
             super(itemView);
-            todo_checkbox = (CheckBox) itemView.findViewById(R.id.todo_checkbox);
+            todo_checkbox = itemView.findViewById(R.id.todo_checkbox);
             todo_checkbox.setOnClickListener(new CheckBoxOnClickListener());
-            menu_button = (ImageView) itemView.findViewById(R.id.todo_menu);
+            menu_button = itemView.findViewById(R.id.todo_menu);
             menu_button.setOnClickListener(new MenuOnClickListener());
-            id = -1;
-            title = "";
         }
 
         class CheckBoxOnClickListener implements View.OnClickListener {
             @Override
             public void onClick(View v) {
-                fragment.toggleChecked(id);
+                callbacks.toggleChecked(getId());
             }
         }
 
         class MenuOnClickListener implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
             @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                switch (item.getItemId()) {
-                    case R.id.menu_edit:
-                        fragment.openEditTodoDialog(id, title);
-                        break;
-                    case R.id.menu_delete:
-                        fragment.deleteTodo(id);
-                }
-                return true;
-            }
-
-            @Override
             public void onClick(View v) {
-                PopupMenu popup = new PopupMenu(fragment.getContext(), v);
+                PopupMenu popup = new PopupMenu(context, v);
                 MenuInflater inflater = popup.getMenuInflater();
                 inflater.inflate(R.menu.todo_item_popup_menu, popup.getMenu());
                 popup.setOnMenuItemClickListener(this);
                 popup.show();
             }
+
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                switch (item.getItemId()) {
+                    case R.id.menu_edit:
+                        callbacks.openEditTodoDialog(getId(), getTitle());
+                        break;
+                    case R.id.menu_delete:
+                        callbacks.deleteTodo(getId());
+                }
+                return true;
+            }
+        }
+
+        private int getId() {
+            try {
+                return getTodo().getInt("id");
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private String getTitle() {
+            try {
+                return getTodo().getString("title");
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private JSONObject getTodo() throws JSONException {
+            return todos.getJSONObject(getAdapterPosition());
         }
     }
 }
