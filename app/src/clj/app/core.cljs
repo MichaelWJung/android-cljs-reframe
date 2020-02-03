@@ -2,6 +2,7 @@
   (:require [app.android :as a]
             [app.db]
             [app.events]
+            [app.store :as st]
             [app.subs]
             [re-frame.core :as rf]))
 
@@ -10,24 +11,17 @@
   (js/setInterval (fn [] nil) 1000))
 
 (defn- initialize [todos]
-  (prn todos)
   (rf/dispatch-sync [:initialize-db todos])
-  ; (rf/dispatch-sync [:add-todo "Müll rausbringen"])
-  ; (rf/dispatch-sync [:add-todo "Termin ausmachen"])
-  ; (rf/dispatch-sync [:add-todo "Katze füttern"])
-  ; (rf/dispatch-sync [:add-todo "Terrasse streichen"])
-  ; (rf/dispatch-sync [:add-todo "Brief schreiben"])
-  ; (rf/dispatch-sync [:add-todo "Fahrrad reparieren"])
-  ; (rf/dispatch-sync [:add-todo "Auto waschen"])
-  ; (rf/dispatch-sync [:add-todo "Oma anrufen"])
-  ; (rf/dispatch-sync [:add-todo "Festplatte formatieren"])
-  ; (rf/dispatch-sync [:toggle-done 2])
-  ; (rf/dispatch-sync [:toggle-done 8])
-  ; (rf/dispatch-sync [:set-showing :active])
   (a/send-ready))
+
+(defn- initialize-store []
+  (reset! st/store
+          (reify st/Store
+            (save [_ todos] (a/todos->store todos)))))
 
 (defn -main [& _]
   (prevent-exit-with-callback)
+  (initialize-store)
   (a/setup-android-interaction initialize)
   (a/send-waiting-for-db))
 

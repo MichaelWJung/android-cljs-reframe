@@ -1,7 +1,7 @@
 (ns app.events
   (:require
     [app.db :refer [default-db]]
-    [app.android :refer [todos->store]]
+    [app.store :refer [todos->store]]
     [re-frame.core :as rf]
     [cljs.spec.alpha :as s]))
 
